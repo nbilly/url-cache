@@ -29,7 +29,7 @@ cfg = "url_cache.cfg"
 history = "api_call.log"
 endless = 1
 poll_timer = 60
-perf_thres= 300
+perf_thres= 200
 
 
 #Debug flags and vars
@@ -44,13 +44,15 @@ ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 delta = 0
+delta_cnt = 0
 no_delta =1
 clear_cache = 0
+i_value_cnt = 0
 vari = []
 
 #Dictionary for url perf:
-d_perf_avg = {'url_trie_lookup' : 0, 'url_trie_lru_perf':0 }
-d_perf_avg_tmp = {'url_trie_lookup' : 0, 'url_trie_lru_perf':0 }
+d_perf_avg = {'url_trie_lookup' : [0,0], 'url_trie_lru_perf': [0,0] }
+d_perf_avg_tmp = {'url_trie_lookup' : [0,0], 'url_trie_lru_perf': [0,0] }
 
 
 # Command line arguments
@@ -145,7 +147,7 @@ while endless == 1:
 	
 	#assert code
 	if debug:
-		print "Raw splitted response:"
+		print "Raw split response:"
 		print tab_result
 	#end of assert
 	for index, t_elem in enumerate(tab_result):
@@ -156,12 +158,14 @@ while endless == 1:
 		#end of assert		
 		if t_elem in d_perf_avg.keys():
 			i_value = int(tab_result[index+2])
+			i_value_cnt = int(tab_result[index+3])
 			#debug code to force treshold activation
 			if poll_iter==poll_iter_tres_act:
 				i_value+=(perf_thres+1)
 			#end of debug
-			if i_value>int(d_perf_avg_tmp[t_elem]):
-				d_perf_avg_tmp[t_elem]=i_value
+			if i_value>int(d_perf_avg_tmp[t_elem][0]):
+				d_perf_avg_tmp[t_elem][0]=i_value
+			d_perf_avg_tmp[t_elem][1]+=i_value_cnt
 
 	# Display Result dictionary
 
@@ -171,9 +175,12 @@ while endless == 1:
 	for d_key in d_perf_avg.keys():
 		#covering corner case where delta is exceeding threshold when getting initial performance value. 
 		if no_delta==0:
-			delta=d_perf_avg_tmp[d_key]-d_perf_avg[d_key]
-		d_perf_avg[d_key]=d_perf_avg_tmp[d_key]
-		print d_key,": ",d_perf_avg[d_key]," (delta: ",delta,")"
+			delta=d_perf_avg_tmp[d_key][0]-d_perf_avg[d_key][0]
+			delta_cnt=d_perf_avg_tmp[d_key][1]-d_perf_avg[d_key][1]
+		d_perf_avg[d_key][0]=d_perf_avg_tmp[d_key][0]
+		d_perf_avg[d_key][1]=d_perf_avg_tmp[d_key][1]
+		
+		print d_key,": ",d_perf_avg[d_key][0]," (delta: ",delta,")"," - count: ",d_perf_avg[d_key][1]," (delta: ",delta_cnt,")"
 		if delta>perf_thres:
 			if cache_cleaning:
 				print "(WARNING: Performance degradation beyond threshold; URL caches will be cleared)"
@@ -185,7 +192,8 @@ while endless == 1:
 				
 	#reset temp dictionary
 	for d_key in d_perf_avg_tmp.keys():
-		d_perf_avg_tmp[d_key]=0
+		d_perf_avg_tmp[d_key][0]=0
+		d_perf_avg_tmp[d_key][1]=0
 	
 	no_delta=0
 	print	
