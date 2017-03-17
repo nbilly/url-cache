@@ -1,6 +1,4 @@
-################
 # url_cache.py #
-################
 
 Python script checking MP/DP URL caches performance numbers (URL TRIE and LRU).
 
@@ -16,12 +14,10 @@ API key and Firewall IP will be requested when script is executed the first time
 
 A config file 'url_cache.cfg' will be created:
 
-+++++++++++++++++++++++++++++++
 IP [FIREWALL IP]
 KEY [API KEY]
 THRESHOLD 200
 POLLING 60
-+++++++++++++++++++++++++++++++
 Threshold and Polling value can be changed manually if needed:
 
 THRESHOLD : maximum delta value for performance results between 2 polls
