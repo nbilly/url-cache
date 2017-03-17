@@ -18,6 +18,7 @@ IP [FIREWALL IP]
 KEY [API KEY]
 THRESHOLD 200
 POLLING 60
+
 Threshold and Polling value can be changed manually if needed:
 
 THRESHOLD : maximum delta value for performance results between 2 polls
