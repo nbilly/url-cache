@@ -79,30 +79,38 @@ else:
 	if yesno=='y':
 		IP = raw_input("Enter Firewall IP: ")
 		KEY = raw_input("Enter a valid Firewall API key: ")
-		f_cfg = open(cfg, "w")
-		f_cfg.write("IP "+IP+"\n")
-		f_cfg.write("KEY "+KEY+"\n")
-		f_cfg.write("THRESHOLD "+str(perf_thres)+"\n")
-		f_cfg.write("POLLING "+str(poll_timer)+"\n")
-		f_cfg.close()
+		try:
+			if_cfg = open(cfg, "w")
+			if_cfg.write("IP "+IP+"\n")
+			if_cfg.write("KEY "+KEY+"\n")
+			if_cfg.write("THRESHOLD "+str(perf_thres)+"\n")
+			if_cfg.write("POLLING "+str(poll_timer)+"\n")
+			if_cfg.close()
+		except:
+			print "Problem when creating configuration file; exiting"
+			exit()
 	else:
 		exit()
 
 #Read configuration file
-f_cfg = open(cfg, "r")
-for tuple in f_cfg:
-        if tuple[0] != '#':
-                vari=tuple.split()
-                if vari[0] == 'IP':
-                    f_ip = vari[1]
-                elif vari[0] == 'KEY':
-                    f_key = vari[1]
-                elif vari[0] == 'THRESHOLD':
-                    perf_thres = int(vari[1])
-                elif vari[0] == 'POLLING':
-                    poll_timer = int(vari[1])                       
-f_cfg.close()
-
+try:
+	f_cfg = open(cfg, "r")
+	for tuple in f_cfg:
+		if tuple[0] != '#':
+			vari=tuple.split()
+			if vari[0] == 'IP':
+				f_ip = vari[1]
+			elif vari[0] == 'KEY':
+				f_key = vari[1]
+			elif vari[0] == 'THRESHOLD':
+				perf_thres = int(vari[1])
+			elif vari[0] == 'POLLING':
+				poll_timer = int(vari[1])                       
+	f_cfg.close()
+except:
+	print "Problem when accessing confoguration file; exiting"
+	exit()
+	
 #URLs for API calls
 api_q = "https://"+f_ip+"/api/?type=op&cmd=<show><running><url-cache><statistics></statistics></url-cache></running></show>&key="+f_key
 api_clear_cache_DP= "https://"+f_ip+"/api/?type=op&cmd=<clear><url-cache><all></all></url-cache></clear>&key="+f_key
@@ -131,17 +139,25 @@ while endless == 1:
 	print "# Timestamp: ", str(datetime.now()),"#"
 	print
 	if clear_cache:
-		api_rc=urllib2.urlopen(api_clear_cache_DP, context=ctx)
-		print("URL cache in DP has been cleared!")
-		time.sleep(5)
-		api_rc=urllib2.urlopen(api_clear_cache_MP, context=ctx)
-		time.sleep(5)
-		clear_cache=0
-		print("URL cache in MP has been cleared!")
-		print
+		try:
+			api_rc=urllib2.urlopen(api_clear_cache_DP, context=ctx)
+			print("URL cache in DP has been cleared!")
+			time.sleep(5)
+			api_rc=urllib2.urlopen(api_clear_cache_MP, context=ctx)
+			time.sleep(5)
+			clear_cache=0
+			print("URL cache in MP has been cleared!")
+			print
+		except:
+			print "Problem when trying to clear caches; exiting"
+			exit()
 		
-	api_a=urllib2.urlopen(api_q, context=ctx)
-
+	try:
+		api_a=urllib2.urlopen(api_q, context=ctx)
+	except:
+		print "Problem when trying to query Firewall; exiting"
+		exit()
+		
 	result=api_a.read()
 	tab_result=str.split(result)
 	
