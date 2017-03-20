@@ -1,0 +1,100 @@
+#!/usr/bin/expect
+
+set username [lindex $argv 0]
+set hostname [lindex $argv 1]
+
+if {[llength $argv] != 2} {
+  send_user "\n******************************************\n"
+  send_user "Usage: <script_name> <username> <hostname>\n"
+  send_user "   Example: script.exp admin 127.0.0.1\n"
+  send_user "******************************************\n\n"
+  exit 1
+}
+
+# log_file script_log.txt
+set timeout 30
+
+puts "\n\n Spawning SSH session... \n\n"
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+
+send_user "Please Enter Password within 10s and wait for the expect script to continue...\n"
+
+expect "assword" {
+	interact timeout 10 return
+}
+send "\r"
+
+expect -re {(.*)\@(.*)>\s$} {
+	send "set cli pager off\r"
+}
+
+expect -re {(.*)\@(.*)>\s$} 
+
+while true {
+	set file1ptr [open url_trie.log a]
+    send "show clock\r"
+	expect -re {(.*)\@(.*)>\s$}
+	set splitCl [split $expect_out(buffer) "\n"]
+	foreach line $splitCl {
+		if {[regexp {.*\d+:\d+:\d+.*} $line clk]} {
+		puts $file1ptr "Time: $clk"
+		}
+	}
+	send "debug device-server pan-url-db show-stats\r"
+	expect -re {(.*)\@(.*)>\s$}
+	set splitRaw [split $expect_out(buffer) "\n"]
+	foreach line $splitRaw {
+		set uTrie 0
+		set nTrie 0
+		set ctrl 0
+        if {[regexp {^Num\. of urls in the TRIE:\s+(\d+)} $line -> uTrie]} {
+			puts $file1ptr "MP TRIE URLs:\t $uTrie"
+			set ctrl 1
+        }
+		if {[regexp {^Num\. of nodes in the TRIE:\s+(\d+)} $line -> nTrie]} {
+			puts $file1ptr "MP TRIE Nodes:\t $nTrie\n"
+			set ctrl 1
+		}
+		if {$ctrl == 1} {
+			if {$uTrie > 300000 || $nTrie > 300000} {
+				send "delete url-database all\r"
+				expect -re {(.*)\@(.*)>\s$}
+				puts $file1ptr "\nMP URL Database Cleared !!!\n"
+				break
+				}
+		}   	
+        }
+	match_max 7500
+	send "show running url-cache statistics\r"
+	expect -re {(.*)\@(.*)>\s$}
+	set splitRaw2 [split $expect_out(buffer) "\n"]
+	set dp "dp0"
+	foreach line $splitRaw2 {
+        set uTrie 0
+        set nTrie 0
+        set ctrl 0
+		if {[regexp {DP (dp[0-2]):} $line whole dp]} {}
+                if {[regexp {^Num\. of urls in the TRIE:\s+(\d+)} $line -> uTrie]} {
+                        puts $file1ptr "$dp TRIE URLs:\t $uTrie"
+                        set ctrl 1
+                }
+                if {[regexp {^Num\. of nodes in the TRIE:\s+(\d+)} $line -> nTrie]} {
+                        puts $file1ptr "$dp TRIE Nodes:\t $nTrie\n"
+                        set ctrl 1
+                }
+                if {$ctrl == 1} {
+                        if {$uTrie > 50000 || $nTrie > 50000} {
+                                send "clear url-cache all\r"
+                                expect -re {(.*)\@(.*)>\s$}
+                                puts $file1ptr "\nDP URL Database Cleared !!!\n"
+                                break
+                                }
+                }
+        }
+	close $file1ptr
+	sleep 60
+}
+
+puts "...Ending Script..."
+send "exit\r"
+close
